@@ -1,66 +1,54 @@
-// code.jsではなく、code.gsです。
-
 function doGet(e) {
-  const EMAIL = Session.getActiveUser().getEmail() || "none";
+  const session_id = random(30);
+  const EMAIL = Session.getActiveUser().getEmail() || "cantauth";
+  console.log("session = " + session_id)
+
+  const auth_data = {
+    id: EMAIL,
+    auth: 'AUTHENTICATE_CODE',
+    name: session_id,
+    score: 'math-u-t'
+  };
+
+  const template = HtmlService.createTemplateFromFile("index");
+
+//  auth_session(auth_data)
+  return template.evaluate()
+    .setTitle("S-KVAuth")
+    .setFaviconUrl("SOMETHING_ICON_URL")
+    .addMetaTag("viewport", "width=device-width, initial-scale=1")
+}
+
+function auth_session(content) {
+  const url = "YOUR_CLOUDFLARE_URL";
+
+  const options = {
+    method: "post",
+    contentType: "application/json",
+    payload: JSON.stringify(content),
+  };
 
   try {
-    log_record(EMAIL, 200);
-    let templateObj = {};
-    return returnHTML(templateObj, "index")
-  } catch (error) {
-    log_record(EMAIL, 503);
-    let templateObj = {};
-    return returnHTML(templateObj, "error")
+    const response = UrlFetchApp.fetch(url, options);
+    Logger.log(response.getContentText());
+  } catch (err) {
+    Logger.log("Worker送信エラー: " + err);
   }
 }
 
-function log_record(userEmail, status) {
-  const now = new Date();
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("アクセスログ");
-
-  const lastRow = sheet.getLastRow() + 1;
-  sheet.getRange(lastRow, 1).setValue(now);
-  sheet.getRange(lastRow, 2).setValue(userEmail);
-  sheet.getRange(lastRow, 3).setValue(status);
-}
-
-// スクリプトプロパティ関数
-function sc_props(value) {
-  return(PropertiesService.getScriptProperties().getProperty(value))
-}
-
-// htmlをテンプレートとして返す関数
-function returnHTML(templateObj, file) {
-  // メインテンプレートの設定と変数注入
-  const mainTemplate = HtmlService.createTemplateFromFile(file);
-  for (const key in templateObj) {
-    mainTemplate[key] = templateObj[key];
+function random(length) {
+  const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  const charsLength = chars.length;
+  const result = [];
+  
+  const randomValues = new Uint32Array(length);
+  crypto.getRandomValues(randomValues);
+  
+  for (let i = 0; i < length; i++) {
+    // 範囲内でランダムインデックスを取得
+    const idx = randomValues[i] % charsLength;
+    result.push(chars[idx]);
   }
-
-  // link.html もテンプレートとして展開
-  const linkTemplate = HtmlService.createTemplateFromFile("link.js");
-  for (const key in templateObj) {
-    linkTemplate[key] = templateObj[key]; // 同じ変数を注入
-  }
-
-  // テンプレート評価（HTML文字列として取得）
-  const mainHtml = mainTemplate.evaluate().getContent();
-  const linkHtml = linkTemplate.evaluate().getContent();
-
-  // 結合して出力
-  const finalHtml = mainHtml + linkHtml;
-
-  const output = HtmlService.createHtmlOutput(finalHtml)
-    .setTitle("google-lite-auth")
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
-    .addMetaTag("viewport", "width=device-width, initial-scale=1")
-    .setFaviconUrl(sc_props("favicon"))
-    .addMetaTag("google-site-verification", "google-lite-auth");
-
-  return output;
-}
-
-//  ページ遷移関数
-function getAppUrl() {
-  return ScriptApp.getService().getUrl();
+  
+  return result.join('');
 }
