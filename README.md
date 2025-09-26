@@ -30,6 +30,31 @@
 
 このシステムは以下の構成で動作します。
 
+```mermaid
+sequenceDiagram
+    participant User as ユーザー
+    participant Site as サイト
+    participant Cache as キャッシュ確認ページ
+    participant GAS as GoogleAppsScript
+    participant API as Cloudflare API
+
+    User->>Site: サイトにアクセス
+    Site->>Cache: キャッシュ確認
+    alt セッションID存在
+        Cache->>User: アクセス可能
+    else セッションID間違い
+        Cache->>User: アクセス不可
+    else セッションIDなし
+        Cache->>GAS: メールアドレス取得
+        GAS->>API: 認証API経由で確認
+        alt 許可ユーザー
+            API->>User: アクセス可能
+        else 不可ユーザー
+            API->>User: アクセス不可
+        end
+    end
+```
+
 1. ユーザーがサイトにアクセスする。この際にごくサイズが小さいページを経由することでキャッシュを読み取り、3で発行されたセッションIDが存在するか確認する。
 ---
 2. セッションIDが存在する場合
@@ -76,5 +101,6 @@
 - クライアントから直接GASを呼び出すため、認証処理がシンプル
 
 ## ライセンス
+
 
 MITライセンス
